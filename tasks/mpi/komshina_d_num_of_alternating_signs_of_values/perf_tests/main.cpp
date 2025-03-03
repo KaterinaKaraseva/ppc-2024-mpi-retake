@@ -1,36 +1,35 @@
 #include <gtest/gtest.h>
 
+#include <boost/mpi/communicator.hpp>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
 
-#include "boost/mpi/communicator.hpp"
 #include "core/perf/include/perf.hpp"
 #include "core/task/include/task.hpp"
-#include "mpi/example/include/ops_mpi.hpp"
+#include "mpi/komshina_d_num_of_alternating_signs_of_values/include/ops_mpi.hpp"
 
-TEST(nesterov_a_test_task_mpi, test_pipeline_run) {
-  constexpr int kCount = 500;
+TEST(komshina_d_num_of_alternations_signs_mpi, test_pipeline_Run) {
+  const int input_size = 180000000;
 
   // Create data
-  std::vector<int> in(kCount * kCount, 0);
-  std::vector<int> out(kCount * kCount, 0);
+  std::vector<int> in(input_size);
+  std::vector<int> out(1, 0);
 
-  for (size_t i = 0; i < kCount; i++) {
-    in[(i * kCount) + i] = 1;
+  int sign = 1;
+  for (int i = 0; i < input_size; ++i, sign = -sign) {
+    in[i] = sign;
   }
 
-  // Create task_data
+  // Create TaskData
   auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
   task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(in.data()));
   task_data_mpi->inputs_count.emplace_back(in.size());
   task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
   task_data_mpi->outputs_count.emplace_back(out.size());
 
-  // Create Task
-  auto test_task_mpi = std::make_shared<nesterov_a_test_task_mpi::TestTaskMPI>(task_data_mpi);
+  auto test_task_mpi = std::make_shared<komshina_d_num_of_alternations_signs_mpi::TestTaskMPI>(task_data_mpi);
 
   // Create Perf attributes
   auto perf_attr = std::make_shared<ppc::core::PerfAttr>();
@@ -51,31 +50,30 @@ TEST(nesterov_a_test_task_mpi, test_pipeline_run) {
   boost::mpi::communicator world;
   if (world.rank() == 0) {
     ppc::core::Perf::PrintPerfStatistic(perf_results);
+    ASSERT_EQ((input_size - 1), out[0]);
   }
-
-  ASSERT_EQ(in, out);
 }
 
-TEST(nesterov_a_test_task_mpi, test_task_run) {
-  constexpr int kCount = 500;
+TEST(komshina_d_num_of_alternations_signs_mpi, test_task_Run) {
+  const int input_size = 180000000;
 
   // Create data
-  std::vector<int> in(kCount * kCount, 0);
-  std::vector<int> out(kCount * kCount, 0);
+  std::vector<int> in(input_size);
+  std::vector<int> out(1, 0);
 
-  for (size_t i = 0; i < kCount; i++) {
-    in[(i * kCount) + i] = 1;
+  int sign = 1;
+  for (int i = 0; i < input_size; ++i, sign = -sign) {
+    in[i] = sign;
   }
 
-  // Create task_data
+  // Create TaskData
   auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
   task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(in.data()));
   task_data_mpi->inputs_count.emplace_back(in.size());
   task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
   task_data_mpi->outputs_count.emplace_back(out.size());
 
-  // Create Task
-  auto test_task_mpi = std::make_shared<nesterov_a_test_task_mpi::TestTaskMPI>(task_data_mpi);
+  auto test_task_mpi = std::make_shared<komshina_d_num_of_alternations_signs_mpi::TestTaskMPI>(task_data_mpi);
 
   // Create Perf attributes
   auto perf_attr = std::make_shared<ppc::core::PerfAttr>();
@@ -97,7 +95,6 @@ TEST(nesterov_a_test_task_mpi, test_task_run) {
   boost::mpi::communicator world;
   if (world.rank() == 0) {
     ppc::core::Perf::PrintPerfStatistic(perf_results);
+    ASSERT_EQ((input_size - 1), out[0]);
   }
-
-  ASSERT_EQ(in, out);
 }
