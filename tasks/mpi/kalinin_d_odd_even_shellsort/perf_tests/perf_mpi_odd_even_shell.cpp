@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -9,29 +9,27 @@
 #include "boost/mpi/communicator.hpp"
 #include "core/perf/include/perf.hpp"
 #include "core/task/include/task.hpp"
-#include "mpi/example/include/ops_mpi.hpp"
+#include "mpi/kalinin_d_odd_even_shellsort/include/header_mpi_odd_even_shell.hpp"
 
-TEST(nesterov_a_test_task_mpi, test_pipeline_run) {
-  constexpr int kCount = 500;
+TEST(kalinin_d_odd_even_shellsort_mpi, test_pipeline_run) {
+  const int n = 3000000;
+
+  boost::mpi::communicator world;
 
   // Create data
-  std::vector<int> in(kCount * kCount, 0);
-  std::vector<int> out(kCount * kCount, 0);
-
-  for (size_t i = 0; i < kCount; i++) {
-    in[(i * kCount) + i] = 1;
+  std::vector<int> arr;
+  std::vector<int> out;
+  auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
+  if (world.rank() == 0) {
+    arr.resize(n);
+    out.resize(n);
+    task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(arr.data()));
+    task_data_mpi->inputs_count.emplace_back(arr.size());
+    task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
+    task_data_mpi->outputs_count.emplace_back(out.size());
   }
 
-  // Create task_data
-  auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
-  task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(in.data()));
-  task_data_mpi->inputs_count.emplace_back(in.size());
-  task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
-  task_data_mpi->outputs_count.emplace_back(out.size());
-
-  // Create Task
-  auto test_task_mpi = std::make_shared<nesterov_a_test_task_mpi::TestTaskMPI>(task_data_mpi);
-
+  auto test_mpi_task_parallel = std::make_shared<kalinin_d_odd_even_shell_mpi::OddEvenShellMpi>(task_data_mpi);
   // Create Perf attributes
   auto perf_attr = std::make_shared<ppc::core::PerfAttr>();
   perf_attr->num_running = 10;
@@ -45,38 +43,35 @@ TEST(nesterov_a_test_task_mpi, test_pipeline_run) {
   // Create and init perf results
   auto perf_results = std::make_shared<ppc::core::PerfResults>();
 
-  auto perf_analyzer = std::make_shared<ppc::core::Perf>(test_task_mpi);
+  auto perf_analyzer = std::make_shared<ppc::core::Perf>(test_mpi_task_parallel);
   perf_analyzer->PipelineRun(perf_attr, perf_results);
   // Create Perf analyzer
-  boost::mpi::communicator world;
   if (world.rank() == 0) {
     ppc::core::Perf::PrintPerfStatistic(perf_results);
+    std::ranges::sort(arr.begin(), arr.end());
+    ASSERT_EQ(arr, out);
   }
-
-  ASSERT_EQ(in, out);
 }
 
-TEST(nesterov_a_test_task_mpi, test_task_run) {
-  constexpr int kCount = 500;
+TEST(kalinin_d_odd_even_shellsort_mpi, test_task_run) {
+  const int n = 3000000;
+
+  boost::mpi::communicator world;
 
   // Create data
-  std::vector<int> in(kCount * kCount, 0);
-  std::vector<int> out(kCount * kCount, 0);
-
-  for (size_t i = 0; i < kCount; i++) {
-    in[(i * kCount) + i] = 1;
+  std::vector<int> arr;
+  std::vector<int> out;
+  auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
+  if (world.rank() == 0) {
+    arr.resize(n);
+    out.resize(n);
+    task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(arr.data()));
+    task_data_mpi->inputs_count.emplace_back(arr.size());
+    task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
+    task_data_mpi->outputs_count.emplace_back(out.size());
   }
 
-  // Create task_data
-  auto task_data_mpi = std::make_shared<ppc::core::TaskData>();
-  task_data_mpi->inputs.emplace_back(reinterpret_cast<uint8_t *>(in.data()));
-  task_data_mpi->inputs_count.emplace_back(in.size());
-  task_data_mpi->outputs.emplace_back(reinterpret_cast<uint8_t *>(out.data()));
-  task_data_mpi->outputs_count.emplace_back(out.size());
-
-  // Create Task
-  auto test_task_mpi = std::make_shared<nesterov_a_test_task_mpi::TestTaskMPI>(task_data_mpi);
-
+  auto test_mpi_task_parallel = std::make_shared<kalinin_d_odd_even_shell_mpi::OddEvenShellMpi>(task_data_mpi);
   // Create Perf attributes
   auto perf_attr = std::make_shared<ppc::core::PerfAttr>();
   perf_attr->num_running = 10;
@@ -91,13 +86,12 @@ TEST(nesterov_a_test_task_mpi, test_task_run) {
   auto perf_results = std::make_shared<ppc::core::PerfResults>();
 
   // Create Perf analyzer
-  auto perf_analyzer = std::make_shared<ppc::core::Perf>(test_task_mpi);
+  auto perf_analyzer = std::make_shared<ppc::core::Perf>(test_mpi_task_parallel);
   perf_analyzer->TaskRun(perf_attr, perf_results);
   // Create Perf analyzer
-  boost::mpi::communicator world;
   if (world.rank() == 0) {
     ppc::core::Perf::PrintPerfStatistic(perf_results);
+    std::ranges::sort(arr.begin(), arr.end());
+    ASSERT_EQ(arr, out);
   }
-
-  ASSERT_EQ(in, out);
 }
